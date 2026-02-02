@@ -251,7 +251,7 @@ if (useOpenAI) {
     }
 
     const providerConfig = {
-        api: 'openai-responses',
+        api: 'openai-chat',
         models: defaultModels
     };
     if (baseUrl) {
