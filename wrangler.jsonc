@@ -73,7 +73,8 @@
   },
   // Environment variables (non-secret)
   "vars": {
-    "TELEGRAM_BOT_TOKEN": "7845013100:AAFyhNhJTEp_6R8ZC6jlnWu1ViXjIWm3QZI"
+    "TELEGRAM_BOT_TOKEN": "7845013100:AAFyhNhJTEp_6R8ZC6jlnWu1ViXjIWm3QZI",
+    "TELEGRAM_DM_POLICY": "open"
   },
   // Note: CF_ACCOUNT_ID should be set via `wrangler secret put CF_ACCOUNT_ID`
   // Secrets to configure via `wrangler secret put`:
