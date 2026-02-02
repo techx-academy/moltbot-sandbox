@@ -362,8 +362,10 @@ The `AI_GATEWAY_*` variables take precedence over `ANTHROPIC_*` if both are set.
 | `AI_GATEWAY_API_KEY` | Yes* | API key for your AI Gateway provider (requires `AI_GATEWAY_BASE_URL`) |
 | `AI_GATEWAY_BASE_URL` | Yes* | AI Gateway endpoint URL (required when using `AI_GATEWAY_API_KEY`) |
 | `ANTHROPIC_API_KEY` | Yes* | Direct Anthropic API key (fallback if AI Gateway not configured) |
-| `ANTHROPIC_BASE_URL` | No | Direct Anthropic API base URL (fallback) |
-| `OPENAI_API_KEY` | No | OpenAI API key (alternative provider) |
+| `ANTHROPIC_BASE_URL` | No | Override Anthropic API base URL |
+| `OPENAI_API_KEY` | Yes* | OpenAI API key (alternative to Anthropic) |
+| `OPENAI_BASE_URL` | No | Override OpenAI API base URL (for OpenAI-compatible APIs like local LLM servers) |
+| `OPENAI_MODEL` | No | Custom model ID (e.g., `moonshotai/kimi-k2.5`, `deepseek-chat`) |
 | `CF_ACCESS_TEAM_DOMAIN` | Yes* | Cloudflare Access team domain (required for admin UI) |
 | `CF_ACCESS_AUD` | Yes* | Cloudflare Access application audience (required for admin UI) |
 | `MOLTBOT_GATEWAY_TOKEN` | Yes | Gateway token for authentication (pass via `?token=` query param) |

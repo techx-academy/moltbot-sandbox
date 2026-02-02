@@ -1,7 +1,14 @@
 # Copy this to .dev.vars and fill in your values
 # .dev.vars is gitignored and used by wrangler dev
 
+# Option 1: Anthropic API (default)
 ANTHROPIC_API_KEY=sk-ant-...
+# ANTHROPIC_BASE_URL=https://api.anthropic.com  # Optional: override base URL
+
+# Option 2: OpenAI or OpenAI-compatible API
+# OPENAI_API_KEY=sk-...
+# OPENAI_BASE_URL=https://api.openai.com/v1  # Optional: for OpenAI-compatible APIs (local LLM, etc.)
+# OPENAI_MODEL=gpt-4o  # Optional: custom model ID (e.g., "moonshotai/kimi-k2.5", "deepseek-chat")
 
 # Local development mode - skips Cloudflare Access auth and bypasses device pairing
 # DEV_MODE=true

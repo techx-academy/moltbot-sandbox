@@ -10,10 +10,12 @@ export interface MoltbotEnv {
   // AI Gateway configuration (preferred)
   AI_GATEWAY_API_KEY?: string; // API key for the provider configured in AI Gateway
   AI_GATEWAY_BASE_URL?: string; // AI Gateway URL (e.g., https://gateway.ai.cloudflare.com/v1/{account_id}/{gateway_id}/anthropic)
-  // Legacy direct provider configuration (fallback)
+  // Direct provider configuration (fallback if AI Gateway not configured)
   ANTHROPIC_API_KEY?: string;
   ANTHROPIC_BASE_URL?: string;
   OPENAI_API_KEY?: string;
+  OPENAI_BASE_URL?: string; // For OpenAI-compatible APIs (e.g., local LLM servers, third-party providers)
+  OPENAI_MODEL?: string; // Custom model ID (e.g., "moonshotai/kimi-k2.5", "deepseek-chat")
   MOLTBOT_GATEWAY_TOKEN?: string; // Gateway token (mapped to CLAWDBOT_GATEWAY_TOKEN for container)
 
   CLAWDBOT_BIND_MODE?: string;
