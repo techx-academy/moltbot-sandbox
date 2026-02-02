@@ -163,6 +163,13 @@ if (config.models?.providers?.anthropic?.models) {
     }
 }
 
+// Clean up any broken telegram config from previous runs
+// (dmPolicy="open" requires allowFrom to include "*")
+if (config.channels?.telegram?.dmPolicy === 'open' && !config.channels.telegram.allowFrom?.includes('*')) {
+    console.log('Fixing telegram config: adding allowFrom for dmPolicy=open');
+    config.channels.telegram.allowFrom = ['*'];
+}
+
 
 
 // Gateway configuration
@@ -187,7 +194,12 @@ if (process.env.TELEGRAM_BOT_TOKEN) {
     config.channels.telegram = config.channels.telegram || {};
     config.channels.telegram.botToken = process.env.TELEGRAM_BOT_TOKEN;
     config.channels.telegram.enabled = true;
-    config.channels.telegram.dmPolicy = process.env.TELEGRAM_DM_POLICY || 'pairing';
+    const telegramDmPolicy = process.env.TELEGRAM_DM_POLICY || 'pairing';
+    config.channels.telegram.dmPolicy = telegramDmPolicy;
+    // When dmPolicy is "open", allowFrom must include "*"
+    if (telegramDmPolicy === 'open') {
+        config.channels.telegram.allowFrom = ['*'];
+    }
 }
 
 // Discord configuration
