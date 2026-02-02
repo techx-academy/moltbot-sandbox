@@ -222,35 +222,69 @@ if (process.env.SLACK_BOT_TOKEN && process.env.SLACK_APP_TOKEN) {
     config.channels.slack.enabled = true;
 }
 
-// Base URL override (e.g., for Cloudflare AI Gateway)
-// Usage: Set AI_GATEWAY_BASE_URL or ANTHROPIC_BASE_URL to your endpoint like:
-//   https://gateway.ai.cloudflare.com/v1/{account_id}/{gateway_id}/anthropic
-//   https://gateway.ai.cloudflare.com/v1/{account_id}/{gateway_id}/openai
-const baseUrl = (process.env.AI_GATEWAY_BASE_URL || process.env.ANTHROPIC_BASE_URL || '').replace(/\/+$/, '');
-const isOpenAI = baseUrl.endsWith('/openai');
+// Base URL override (e.g., for Cloudflare AI Gateway or OpenAI-compatible APIs)
+// Usage:
+//   - AI_GATEWAY_BASE_URL: Cloudflare AI Gateway (use `/anthropic` or `/openai` suffix)
+//   - ANTHROPIC_BASE_URL: Anthropic-compatible endpoint (optional)
+//   - OPENAI_BASE_URL: OpenAI-compatible endpoint (optional)
+//   - OPENAI_MODEL: Custom OpenAI model id (optional)
+const aiGatewayUrl = (process.env.AI_GATEWAY_BASE_URL || '').replace(/\/+$/, '');
+const anthropicBaseUrl = (process.env.ANTHROPIC_BASE_URL || '').replace(/\/+$/, '');
+const openaiBaseUrl = (process.env.OPENAI_BASE_URL || '').replace(/\/+$/, '');
 
-if (isOpenAI) {
-    // Create custom openai provider config with baseUrl override
-    // Omit apiKey so moltbot falls back to OPENAI_API_KEY env var
-    console.log('Configuring OpenAI provider with base URL:', baseUrl);
+const isAiGatewayOpenAI = aiGatewayUrl.endsWith('/openai');
+const isAiGatewayAnthropic = aiGatewayUrl.endsWith('/anthropic');
+
+const shouldUseOpenAI = isAiGatewayOpenAI || !!openaiBaseUrl || (!!process.env.OPENAI_API_KEY && !process.env.ANTHROPIC_API_KEY);
+const shouldUseCustomAnthropic = isAiGatewayAnthropic || (!!aiGatewayUrl && !isAiGatewayOpenAI) || !!anthropicBaseUrl;
+
+if (shouldUseOpenAI) {
+    const baseUrl = isAiGatewayOpenAI ? aiGatewayUrl : openaiBaseUrl;
+    const customModel = process.env.OPENAI_MODEL || '';
+    const apiFormat = openaiBaseUrl ? 'openai-chat' : 'openai-responses';
+
+    console.log('Configuring OpenAI provider' + (baseUrl ? ' with base URL: ' + baseUrl : ''));
+    console.log('Using OpenAI API format:', apiFormat);
+    if (customModel) {
+        console.log('Using custom model:', customModel);
+    }
+
     config.models = config.models || {};
     config.models.providers = config.models.providers || {};
-    config.models.providers.openai = {
-        baseUrl: baseUrl,
-        api: 'openai-responses',
-        models: [
-            { id: 'gpt-5.2', name: 'GPT-5.2', contextWindow: 200000 },
-            { id: 'gpt-5', name: 'GPT-5', contextWindow: 200000 },
-            { id: 'gpt-4.5-preview', name: 'GPT-4.5 Preview', contextWindow: 128000 },
-        ]
+
+    const defaultModels = [
+        { id: 'gpt-5.2', name: 'GPT-5.2', contextWindow: 200000 },
+        { id: 'gpt-5', name: 'GPT-5', contextWindow: 200000 },
+        { id: 'gpt-4.5-preview', name: 'GPT-4.5 Preview', contextWindow: 128000 },
+    ];
+
+    if (customModel) {
+        defaultModels.unshift({ id: customModel, name: customModel, contextWindow: 200000 });
+    }
+
+    const providerConfig = {
+        api: apiFormat,
+        models: defaultModels
     };
+    if (baseUrl) {
+        providerConfig.baseUrl = baseUrl;
+    }
+    config.models.providers.openai = providerConfig;
+
     // Add models to the allowlist so they appear in /models
     config.agents.defaults.models = config.agents.defaults.models || {};
     config.agents.defaults.models['openai/gpt-5.2'] = { alias: 'GPT-5.2' };
     config.agents.defaults.models['openai/gpt-5'] = { alias: 'GPT-5' };
     config.agents.defaults.models['openai/gpt-4.5-preview'] = { alias: 'GPT-4.5' };
-    config.agents.defaults.model.primary = 'openai/gpt-5.2';
-} else if (baseUrl) {
+
+    if (customModel) {
+        config.agents.defaults.models['openai/' + customModel] = { alias: customModel };
+        config.agents.defaults.model.primary = 'openai/' + customModel;
+    } else {
+        config.agents.defaults.model.primary = 'openai/gpt-5.2';
+    }
+} else if (shouldUseCustomAnthropic) {
+    const baseUrl = aiGatewayUrl || anthropicBaseUrl;
     console.log('Configuring Anthropic provider with base URL:', baseUrl);
     config.models = config.models || {};
     config.models.providers = config.models.providers || {};
