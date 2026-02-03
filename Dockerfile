@@ -18,7 +18,7 @@ RUN ARCH="$(dpkg --print-architecture)" \
     && npm --version
 
 # Install pnpm globally
-RUN npm install -g pnpm
+RUN npm install -g pnpm && echo "cache-bust-2026-02-04-v31-add-apikey"
 
 # Install moltbot (CLI is still named clawdbot until upstream renames)
 # Pin to specific version for reproducible builds
@@ -33,7 +33,7 @@ RUN mkdir -p /root/.clawdbot \
     && mkdir -p /root/clawd/skills
 
 # Copy startup script
-# Build cache bust: 2026-02-04-v28-openai-api-format
+# Build cache bust: 2026-02-04-v29-openai-completions-fix
 COPY start-moltbot.sh /usr/local/bin/start-moltbot.sh
 RUN chmod +x /usr/local/bin/start-moltbot.sh
 

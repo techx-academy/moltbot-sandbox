@@ -243,7 +243,7 @@ if (shouldUseOpenAI) {
     const customModel = process.env.OPENAI_MODEL || '';
     const customModelId = customModel ? (customModel.includes('/') ? customModel.split('/').pop() : customModel) : '';
     const customModelName = customModelId ? customModelId.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '';
-    const apiFormat = isAiGatewayOpenAI ? 'openai-responses' : openaiBaseUrl ? 'openai-chat' : 'openai-responses';
+    const apiFormat = 'openai-completions';
 
     console.log('Configuring OpenAI provider' + (baseUrl ? ' with base URL: ' + baseUrl : ''));
     console.log('Using OpenAI API format:', apiFormat);
@@ -270,6 +270,10 @@ if (shouldUseOpenAI) {
     };
     if (baseUrl) {
         providerConfig.baseUrl = baseUrl;
+    }
+    // Include API key in provider config (required for OpenAI-compatible APIs)
+    if (process.env.OPENAI_API_KEY) {
+        providerConfig.apiKey = process.env.OPENAI_API_KEY;
     }
     config.models.providers.openai = providerConfig;
 
