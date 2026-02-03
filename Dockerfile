@@ -18,7 +18,7 @@ RUN ARCH="$(dpkg --print-architecture)" \
     && npm --version
 
 # Install pnpm globally
-RUN npm install -g pnpm && echo "cache-bust-2026-02-04-v31-add-apikey"
+RUN npm install -g pnpm && echo "cache-bust-2026-02-04-v33-full-model-id"
 
 # Install moltbot (CLI is still named clawdbot until upstream renames)
 # Pin to specific version for reproducible builds

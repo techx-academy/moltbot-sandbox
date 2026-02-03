@@ -133,7 +133,7 @@ fi
 # ============================================================
 # UPDATE CONFIG FROM ENVIRONMENT VARIABLES
 # ============================================================
-node << EOFNODE
+node << 'EOFNODE'
 const fs = require('fs');
 
 const configPath = '/root/.clawdbot/clawdbot.json';
@@ -241,8 +241,11 @@ const shouldUseCustomAnthropic = isAiGatewayAnthropic || (!!aiGatewayUrl && !isA
 if (shouldUseOpenAI) {
     const baseUrl = isAiGatewayOpenAI ? aiGatewayUrl : openaiBaseUrl;
     const customModel = process.env.OPENAI_MODEL || '';
-    const customModelId = customModel ? (customModel.includes('/') ? customModel.split('/').pop() : customModel) : '';
-    const customModelName = customModelId ? customModelId.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '';
+    // Keep full model ID (e.g., moonshotai/kimi-k2.5) for NVIDIA and other APIs
+    const customModelId = customModel;
+    // Extract display name from last part of the path
+    const customModelDisplayName = customModel.includes('/') ? customModel.split('/').pop() : customModel;
+    const customModelName = customModelDisplayName ? customModelDisplayName.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '';
     const apiFormat = 'openai-completions';
 
     console.log('Configuring OpenAI provider' + (baseUrl ? ' with base URL: ' + baseUrl : ''));
