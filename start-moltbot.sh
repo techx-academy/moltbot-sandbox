@@ -241,12 +241,14 @@ const shouldUseCustomAnthropic = isAiGatewayAnthropic || (!!aiGatewayUrl && !isA
 if (shouldUseOpenAI) {
     const baseUrl = isAiGatewayOpenAI ? aiGatewayUrl : openaiBaseUrl;
     const customModel = process.env.OPENAI_MODEL || '';
-    const apiFormat = openaiBaseUrl ? 'openai-chat' : 'openai-responses';
+    const customModelId = customModel ? (customModel.includes('/') ? customModel.split('/').pop() : customModel) : '';
+    const customModelName = customModelId ? customModelId.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '';
+    const apiFormat = isAiGatewayOpenAI ? 'openai-responses' : openaiBaseUrl ? 'openai-chat' : 'openai-responses';
 
     console.log('Configuring OpenAI provider' + (baseUrl ? ' with base URL: ' + baseUrl : ''));
     console.log('Using OpenAI API format:', apiFormat);
-    if (customModel) {
-        console.log('Using custom model:', customModel);
+    if (customModelId) {
+        console.log('Using custom model:', customModel, '(id: ' + customModelId + ')');
     }
 
     config.models = config.models || {};
@@ -258,8 +260,8 @@ if (shouldUseOpenAI) {
         { id: 'gpt-4.5-preview', name: 'GPT-4.5 Preview', contextWindow: 128000 },
     ];
 
-    if (customModel) {
-        defaultModels.unshift({ id: customModel, name: customModel, contextWindow: 200000 });
+    if (customModelId) {
+        defaultModels.unshift({ id: customModelId, name: customModelName || customModelId, contextWindow: 200000 });
     }
 
     const providerConfig = {
@@ -277,9 +279,9 @@ if (shouldUseOpenAI) {
     config.agents.defaults.models['openai/gpt-5'] = { alias: 'GPT-5' };
     config.agents.defaults.models['openai/gpt-4.5-preview'] = { alias: 'GPT-4.5' };
 
-    if (customModel) {
-        config.agents.defaults.models['openai/' + customModel] = { alias: customModel };
-        config.agents.defaults.model.primary = 'openai/' + customModel;
+    if (customModelId) {
+        config.agents.defaults.models['openai/' + customModelId] = { alias: customModelName || customModelId };
+        config.agents.defaults.model.primary = 'openai/' + customModelId;
     } else {
         config.agents.defaults.model.primary = 'openai/gpt-5.2';
     }
