@@ -163,13 +163,6 @@ if (config.models?.providers?.anthropic?.models) {
     }
 }
 
-// Clean up any broken telegram config from previous runs
-// (dmPolicy="open" requires allowFrom to include "*")
-if (config.channels?.telegram?.dmPolicy === 'open' && !config.channels.telegram.allowFrom?.includes('*')) {
-    console.log('Fixing telegram config: adding allowFrom for dmPolicy=open');
-    config.channels.telegram.allowFrom = ['*'];
-}
-
 
 
 // Gateway configuration
@@ -196,19 +189,29 @@ if (process.env.TELEGRAM_BOT_TOKEN) {
     config.channels.telegram.enabled = true;
     const telegramDmPolicy = process.env.TELEGRAM_DM_POLICY || 'pairing';
     config.channels.telegram.dmPolicy = telegramDmPolicy;
-    // When dmPolicy is "open", allowFrom must include "*"
-    if (telegramDmPolicy === 'open') {
+    if (process.env.TELEGRAM_DM_ALLOW_FROM) {
+        // Explicit allowlist: "123,456,789" → ['123', '456', '789']
+        config.channels.telegram.allowFrom = process.env.TELEGRAM_DM_ALLOW_FROM.split(',');
+    } else if (telegramDmPolicy === 'open') {
+        // "open" policy requires allowFrom: ["*"]
         config.channels.telegram.allowFrom = ['*'];
     }
 }
 
 // Discord configuration
+// Note: Discord uses nested dm.policy, not flat dmPolicy like Telegram
+// See: https://github.com/moltbot/moltbot/blob/v2026.1.24-1/src/config/zod-schema.providers-core.ts#L147-L155
 if (process.env.DISCORD_BOT_TOKEN) {
     config.channels.discord = config.channels.discord || {};
     config.channels.discord.token = process.env.DISCORD_BOT_TOKEN;
     config.channels.discord.enabled = true;
+    const discordDmPolicy = process.env.DISCORD_DM_POLICY || 'pairing';
     config.channels.discord.dm = config.channels.discord.dm || {};
-    config.channels.discord.dm.policy = process.env.DISCORD_DM_POLICY || 'pairing';
+    config.channels.discord.dm.policy = discordDmPolicy;
+    // "open" policy requires allowFrom: ["*"]
+    if (discordDmPolicy === 'open') {
+        config.channels.discord.dm.allowFrom = ['*'];
+    }
 }
 
 // Slack configuration
@@ -221,25 +224,27 @@ if (process.env.SLACK_BOT_TOKEN && process.env.SLACK_APP_TOKEN) {
 
 // Base URL override (e.g., for Cloudflare AI Gateway or OpenAI-compatible APIs)
 // Usage:
-//   - AI_GATEWAY_BASE_URL: For Cloudflare AI Gateway (auto-detects provider from URL suffix)
-//   - OPENAI_BASE_URL + OPENAI_API_KEY: For OpenAI-compatible APIs (local LLM servers, etc.)
-//   - ANTHROPIC_BASE_URL + ANTHROPIC_API_KEY: For Anthropic API with custom base URL
-const aiGatewayUrl = process.env.AI_GATEWAY_BASE_URL || '';
-const openaiBaseUrl = process.env.OPENAI_BASE_URL || '';
-const anthropicBaseUrl = process.env.ANTHROPIC_BASE_URL || '';
+//   - AI_GATEWAY_BASE_URL: Cloudflare AI Gateway (use `/anthropic` or `/openai` suffix)
+//   - ANTHROPIC_BASE_URL: Anthropic-compatible endpoint (optional)
+//   - OPENAI_BASE_URL: OpenAI-compatible endpoint (optional)
+//   - OPENAI_MODEL: Custom OpenAI model id (optional)
+const aiGatewayUrl = (process.env.AI_GATEWAY_BASE_URL || '').replace(/\/+$/, '');
+const anthropicBaseUrl = (process.env.ANTHROPIC_BASE_URL || '').replace(/\/+$/, '');
+const openaiBaseUrl = (process.env.OPENAI_BASE_URL || '').replace(/\/+$/, '');
 
-// Determine which provider to use:
-// 1. AI Gateway (auto-detect from URL suffix)
-// 2. Direct OpenAI (if OPENAI_API_KEY is set)
-// 3. Direct Anthropic (default)
 const isAiGatewayOpenAI = aiGatewayUrl.endsWith('/openai');
-const useOpenAI = isAiGatewayOpenAI || (process.env.OPENAI_API_KEY && !process.env.ANTHROPIC_API_KEY) || openaiBaseUrl;
+const isAiGatewayAnthropic = aiGatewayUrl.endsWith('/anthropic');
 
-if (useOpenAI) {
-    // Use OpenAI or OpenAI-compatible API
-    const baseUrl = aiGatewayUrl || openaiBaseUrl || '';
+const shouldUseOpenAI = isAiGatewayOpenAI || !!openaiBaseUrl || (!!process.env.OPENAI_API_KEY && !process.env.ANTHROPIC_API_KEY);
+const shouldUseCustomAnthropic = isAiGatewayAnthropic || (!!aiGatewayUrl && !isAiGatewayOpenAI) || !!anthropicBaseUrl;
+
+if (shouldUseOpenAI) {
+    const baseUrl = isAiGatewayOpenAI ? aiGatewayUrl : openaiBaseUrl;
     const customModel = process.env.OPENAI_MODEL || '';
+    const apiFormat = openaiBaseUrl ? 'openai-chat' : 'openai-responses';
+
     console.log('Configuring OpenAI provider' + (baseUrl ? ' with base URL: ' + baseUrl : ''));
+    console.log('Using OpenAI API format:', apiFormat);
     if (customModel) {
         console.log('Using custom model:', customModel);
     }
@@ -247,48 +252,38 @@ if (useOpenAI) {
     config.models = config.models || {};
     config.models.providers = config.models.providers || {};
 
-    // Build models list - include custom model if specified
     const defaultModels = [
-        { id: 'gpt-4o', name: 'GPT-4o', contextWindow: 128000 },
-        { id: 'gpt-4o-mini', name: 'GPT-4o Mini', contextWindow: 128000 },
+        { id: 'gpt-5.2', name: 'GPT-5.2', contextWindow: 200000 },
+        { id: 'gpt-5', name: 'GPT-5', contextWindow: 200000 },
+        { id: 'gpt-4.5-preview', name: 'GPT-4.5 Preview', contextWindow: 128000 },
     ];
 
-    // If custom model is specified, add it to the list
     if (customModel) {
-        // Extract just the model ID part (after slash if present)
-        const modelId = customModel.includes('/') ? customModel.split('/').pop() : customModel;
-        const modelName = modelId.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-        defaultModels.unshift({ id: modelId, name: modelName, contextWindow: 128000 });
+        defaultModels.unshift({ id: customModel, name: customModel, contextWindow: 200000 });
     }
 
     const providerConfig = {
+        api: apiFormat,
         models: defaultModels
     };
     if (baseUrl) {
         providerConfig.baseUrl = baseUrl;
     }
-    // Include API key in provider config if set (required when using custom baseUrl)
-    if (process.env.OPENAI_API_KEY) {
-        providerConfig.apiKey = process.env.OPENAI_API_KEY;
-    }
     config.models.providers.openai = providerConfig;
 
     // Add models to the allowlist so they appear in /models
     config.agents.defaults.models = config.agents.defaults.models || {};
-    config.agents.defaults.models['openai/gpt-4o'] = { alias: 'GPT-4o' };
-    config.agents.defaults.models['openai/gpt-4o-mini'] = { alias: 'GPT-4o Mini' };
+    config.agents.defaults.models['openai/gpt-5.2'] = { alias: 'GPT-5.2' };
+    config.agents.defaults.models['openai/gpt-5'] = { alias: 'GPT-5' };
+    config.agents.defaults.models['openai/gpt-4.5-preview'] = { alias: 'GPT-4.5' };
 
-    // Set default model - use custom model if specified
     if (customModel) {
-        const modelId = customModel.includes('/') ? customModel.split('/').pop() : customModel;
-        const modelName = modelId.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-        config.agents.defaults.models['openai/' + modelId] = { alias: modelName };
-        config.agents.defaults.model.primary = 'openai/' + modelId;
+        config.agents.defaults.models['openai/' + customModel] = { alias: customModel };
+        config.agents.defaults.model.primary = 'openai/' + customModel;
     } else {
-        config.agents.defaults.model.primary = 'openai/gpt-4o';
+        config.agents.defaults.model.primary = 'openai/gpt-5.2';
     }
-} else if (aiGatewayUrl || anthropicBaseUrl) {
-    // Use Anthropic with custom base URL
+} else if (shouldUseCustomAnthropic) {
     const baseUrl = aiGatewayUrl || anthropicBaseUrl;
     console.log('Configuring Anthropic provider with base URL:', baseUrl);
     config.models = config.models || {};
